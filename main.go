@@ -23,12 +23,10 @@ func NewPromise(
 	) (interface{}, error)) *Promise {
 
 	resolveFunc := func(v interface{}) (interface{}, error) {
-		fmt.Println("Resolved")
 		return v, nil
 	}
 
 	rejectFunc := func(e error) (interface{}, error) {
-		fmt.Println("Rejected")
 		return "", e
 	}
 
@@ -53,13 +51,28 @@ func getPromiseOrEmptyPromise(p *Promise) *Promise {
 	return p1
 }
 
+func populatePromise(prom1 *Promise, val1 interface{}, err1 error) *Promise {
+	if prom1 == nil {
+		prom1 = getPromiseOrEmptyPromise(nil)
+		if val1 == nil {
+			prom1.err = err1
+		}
+		if val1 != nil {
+			prom1.res = val1
+		}
+	}
+	return prom1
+}
+
 // Then Method
 func (p *Promise) Then(funcs ...interface{}) *Promise {
+
+	fmt.Println("Then Called")
 
 	var r func(r interface{}) (*Promise, interface{}, error)
 	var e func(err error) (*Promise, interface{}, error)
 
-	if len(funcs) == 1 {
+	if len(funcs) >= 1 {
 		r = reflect.ValueOf(funcs[0]).Interface().(func(r interface{}) (*Promise, interface{}, error))
 	}
 
@@ -72,91 +85,49 @@ func (p *Promise) Then(funcs ...interface{}) *Promise {
 	go func() {
 		p.wg.Wait()
 		if p.err != nil {
-			fmt.Println("Found Error")
 
 			if e == nil {
+				fmt.Println("e is null")
 				p1 = p
 				p.channel <- 1
 				return
 			}
 			prom1, val1, err1 := e(p.err)
-			if prom1 == nil {
-				prom1 = getPromiseOrEmptyPromise(nil)
-				if val1 == nil {
-					prom1.err = err1
-				}
-				if val1 != nil {
-					prom1.res = val1
-				}
-			}
-			p1 = prom1
+			p1 = populatePromise(prom1, val1, err1)
 			p.channel <- 1
 			return
 		}
-		fmt.Println("No Error")
 		if r == nil {
+			fmt.Println("r is null")
 			p1 = p
 			p.channel <- 1
 			return
 		}
 
 		prom1, val1, err1 := r(p.res)
-		if prom1 == nil {
-			prom1 = getPromiseOrEmptyPromise(nil)
-			if val1 == nil {
-				prom1.err = err1
-			}
-			if val1 != nil {
-				prom1.res = val1
-			}
-		}
-		p1 = prom1
+		p1 = populatePromise(prom1, val1, err1)
 		p.channel <- 1
 	}()
 	<-p.channel
-	return getPromiseOrEmptyPromise(p1)
+	return p1
 }
 
 // Catch Method
 func (p *Promise) Catch(funcs ...interface{}) *Promise {
 
-	var e func(err error) (*Promise, interface{}, error)
+	fmt.Println(len(funcs))
 
-	if len(funcs) == 1 {
-		e = reflect.ValueOf(funcs[0]).Interface().(func(err error) (*Promise, interface{}, error))
+	if len(funcs) == 0 {
+		return p
 	}
 
-	var p1 *Promise
-
-	go func() {
-		p.wg.Wait()
-		if p.err != nil {
-
-			if e == nil {
-				p1 = p
-				p.channel <- 1
-				return
-			}
-
-			prom1, val1, err1 := e(p.err)
-			if prom1 == nil {
-				prom1 = getPromiseOrEmptyPromise(nil)
-				if val1 == nil {
-					prom1.err = err1
-				}
-				if val1 != nil {
-					prom1.res = val1
-				}
-			}
-			p1 = prom1
-			p.channel <- 1
-			return
-		}
-		p1 = p
-		p.channel <- 1
-	}()
-	<-p.channel
-	return getPromiseOrEmptyPromise(p1)
+	return p.Then(
+		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Callin then from Catch", r)
+			return nil, r, nil
+		},
+		funcs[0],
+	)
 }
 
 // Finally Method
@@ -173,6 +144,8 @@ func (p *Promise) Finally(f func()) *Promise {
 
 func main() {
 
+	fmt.Println("Starting\n")
+
 	links := []string{
 		"http://google.com",
 		"http://youtube.com",
@@ -181,15 +154,14 @@ func main() {
 
 	link := links[0]
 	link2 := links[1]
+	link3 := links[2]
 
 	NewPromise(
 		func(
 			resolve func(v interface{}) (interface{}, error),
 			reject func(e error) (interface{}, error),
 		) (interface{}, error) {
-			fmt.Println("Calling Now")
 			_, err := http.Get(link)
-			fmt.Println("Got the Result")
 			if err != nil {
 				return reject(fmt.Errorf("%v is down :(", link))
 			}
@@ -197,11 +169,30 @@ func main() {
 		},
 	).Finally(
 		func() {
-			fmt.Println("FinallyFinallyFinallyFinally")
+			fmt.Println("Finally 1")
+		},
+	).Catch(
+		func(err error) (*Promise, interface{}, error) {
+			fmt.Println("On Fail 0000000", err)
+			return nil, nil, nil
+		},
+	).Then(
+		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Success >>>>", r)
+			return nil, nil, fmt.Errorf("Throwing Exception")
+		},
+	).Then(
+		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Success >>>>", r)
+			return nil, "Should Catch Exception, somethign is wrong", nil
+		},
+		func(err error) (*Promise, interface{}, error) {
+			fmt.Println("Failed >>>>", err)
+			return nil, "Exception Caught Correctly 111", nil
 		},
 	).Catch().Then(
 		func(r interface{}) (*Promise, interface{}, error) {
-			fmt.Println("On Success", r)
+			fmt.Println("On Success 1111 >> ", r)
 			return NewPromise(
 				func(
 					resolve func(v interface{}) (interface{}, error),
@@ -218,8 +209,13 @@ func main() {
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Success >>>>", r)
+			return nil, "Just a value", nil
+		},
+	).Then(
+		func(r interface{}) (*Promise, interface{}, error) {
 			fmt.Println("Success <<<<<", r)
-			return nil, nil, fmt.Errorf("Just a value")
+			return nil, nil, fmt.Errorf("Just a Fail")
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
@@ -229,7 +225,19 @@ func main() {
 	).Catch(
 		func(err error) (*Promise, interface{}, error) {
 			fmt.Println("On Fail2", err)
-			return nil, nil, nil
+			return NewPromise(
+				func(
+					resolve func(v interface{}) (interface{}, error),
+					reject func(e error) (interface{}, error),
+				) (interface{}, error) {
+
+					_, err := http.Get(link3)
+					if err != nil {
+						return reject(fmt.Errorf("%v is down :(", link3))
+					}
+					return resolve(link3 + " is up :)")
+				},
+			), nil, nil
 		},
 	).Catch(
 		func(err error) (*Promise, interface{}, error) {
@@ -238,10 +246,11 @@ func main() {
 		},
 	).Finally(
 		func() {
-			fmt.Println("FinallyFinallyFinallyFinally")
+			fmt.Println("Finally 2")
 		},
 	)
 
-	fmt.Println("I'm Here")
+	fmt.Println("All Done")
+	// time.Sleep(10 * time.Second)
 
 }

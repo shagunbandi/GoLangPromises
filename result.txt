@@ -1,0 +1,27 @@
+Starting
+
+Finally 1
+1
+Then Called
+Callin then from Catch http://google.com is up :)
+Then Called
+Success >>>> http://google.com is up :)
+Then Called
+Failed >>>> Throwing Exception
+0
+Then Called
+On Success 1111 >>  Exception Caught Correctly 111
+Then Called
+Success >>>> http://youtube.com is up :)
+Then Called
+Success <<<<< Just a value
+Then Called
+e is null
+1
+Then Called
+On Fail2 Just a Fail
+1
+Then Called
+On Fail3 http://facebook.com is down :(
+Finally 2
+All Done
