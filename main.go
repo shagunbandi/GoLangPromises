@@ -56,15 +56,15 @@ func getPromiseOrEmptyPromise(p *Promise) *Promise {
 // Then Method
 func (p *Promise) Then(funcs ...interface{}) *Promise {
 
-	var r func(r interface{}) *Promise
-	var e func(err error) *Promise
+	var r func(r interface{}) (*Promise, interface{}, error)
+	var e func(err error) (*Promise, interface{}, error)
 
 	if len(funcs) == 1 {
-		r = reflect.ValueOf(funcs[0]).Interface().(func(r interface{}) *Promise)
+		r = reflect.ValueOf(funcs[0]).Interface().(func(r interface{}) (*Promise, interface{}, error))
 	}
 
 	if len(funcs) == 2 {
-		e = reflect.ValueOf(funcs[1]).Interface().(func(err error) *Promise)
+		e = reflect.ValueOf(funcs[1]).Interface().(func(err error) (*Promise, interface{}, error))
 	}
 
 	var p1 *Promise
@@ -79,7 +79,17 @@ func (p *Promise) Then(funcs ...interface{}) *Promise {
 				p.channel <- 1
 				return
 			}
-			p1 = e(p.err)
+			prom1, val1, err1 := e(p.err)
+			if prom1 == nil {
+				prom1 = getPromiseOrEmptyPromise(nil)
+				if val1 == nil {
+					prom1.err = err1
+				}
+				if val1 != nil {
+					prom1.res = val1
+				}
+			}
+			p1 = prom1
 			p.channel <- 1
 			return
 		}
@@ -89,7 +99,18 @@ func (p *Promise) Then(funcs ...interface{}) *Promise {
 			p.channel <- 1
 			return
 		}
-		p1 = r(p.res)
+
+		prom1, val1, err1 := r(p.res)
+		if prom1 == nil {
+			prom1 = getPromiseOrEmptyPromise(nil)
+			if val1 == nil {
+				prom1.err = err1
+			}
+			if val1 != nil {
+				prom1.res = val1
+			}
+		}
+		p1 = prom1
 		p.channel <- 1
 	}()
 	<-p.channel
@@ -99,10 +120,10 @@ func (p *Promise) Then(funcs ...interface{}) *Promise {
 // Catch Method
 func (p *Promise) Catch(funcs ...interface{}) *Promise {
 
-	var e func(err error) *Promise
+	var e func(err error) (*Promise, interface{}, error)
 
 	if len(funcs) == 1 {
-		e = reflect.ValueOf(funcs[0]).Interface().(func(err error) *Promise)
+		e = reflect.ValueOf(funcs[0]).Interface().(func(err error) (*Promise, interface{}, error))
 	}
 
 	var p1 *Promise
@@ -117,7 +138,17 @@ func (p *Promise) Catch(funcs ...interface{}) *Promise {
 				return
 			}
 
-			p1 = e(p.err)
+			prom1, val1, err1 := e(p.err)
+			if prom1 == nil {
+				prom1 = getPromiseOrEmptyPromise(nil)
+				if val1 == nil {
+					prom1.err = err1
+				}
+				if val1 != nil {
+					prom1.res = val1
+				}
+			}
+			p1 = prom1
 			p.channel <- 1
 			return
 		}
@@ -144,8 +175,8 @@ func main() {
 
 	links := []string{
 		"http://google.com",
-		"http://facebook.com",
 		"http://youtube.com",
+		"http://facebook.com",
 	}
 
 	link := links[0]
@@ -169,7 +200,7 @@ func main() {
 			fmt.Println("FinallyFinallyFinallyFinally")
 		},
 	).Catch().Then(
-		func(r interface{}) *Promise {
+		func(r interface{}) (*Promise, interface{}, error) {
 			fmt.Println("On Success", r)
 			return NewPromise(
 				func(
@@ -183,22 +214,27 @@ func main() {
 					}
 					return resolve(link2 + " is up :)")
 				},
-			)
+			), nil, nil
 		},
 	).Then(
-		func(r interface{}) *Promise {
-			fmt.Println("Success", r)
-			return nil
+		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Success <<<<<", r)
+			return nil, nil, fmt.Errorf("Just a value")
+		},
+	).Then(
+		func(r interface{}) (*Promise, interface{}, error) {
+			fmt.Println("Success >>>>", r)
+			return nil, "Just a value", nil
 		},
 	).Catch(
-		func(err error) *Promise {
+		func(err error) (*Promise, interface{}, error) {
 			fmt.Println("On Fail2", err)
-			return nil
+			return nil, nil, nil
 		},
 	).Catch(
-		func(err error) *Promise {
+		func(err error) (*Promise, interface{}, error) {
 			fmt.Println("On Fail3", err)
-			return nil
+			return nil, nil, nil
 		},
 	).Finally(
 		func() {
