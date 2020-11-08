@@ -15,4 +15,5 @@ type Promise struct {
 	channel chan int
 	res     interface{}
 	err     error
+	status  int
 }

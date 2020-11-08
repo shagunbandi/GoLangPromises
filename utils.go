@@ -8,17 +8,25 @@ func getPromiseOrEmptyPromise(p *Promise) *Promise {
 	p1.channel = make(chan int)
 	p1.res = nil
 	p1.err = nil
+	p1.status = 0
 	return p1
 }
 
-func populatePromise(p *Promise, val1 interface{}, err1 error) *Promise {
+func populatePromise(p *Promise, r interface{}, e error) *Promise {
 	if p == nil {
 		p = getPromiseOrEmptyPromise(nil)
-		if val1 == nil {
-			p.err = err1
+		if r != nil {
+			p.status = 1
+			p.res = r
+			p.err = nil
 		}
-		if val1 != nil {
-			p.res = val1
+		if e != nil {
+			p.status = 2
+			p.err = e
+			p.res = nil
+		}
+		if r == nil && e == nil {
+			p.status = 1
 		}
 	}
 	return p

@@ -6,9 +6,6 @@ import (
 )
 
 func main() {
-
-	fmt.Println("Starting\n")
-
 	links := []string{
 		"http://google.com",
 		"http://youtube.com",
@@ -29,10 +26,9 @@ func main() {
 				return reject(fmt.Errorf("%v is down :(", link))
 			}
 			return resolve(link + " is up :)")
+			// return nil, nil
 		},
-	)
-
-	p.Finally(
+	).Finally(
 		func() {
 			fmt.Println("Finally 1")
 		},
@@ -77,6 +73,10 @@ func main() {
 			fmt.Println("Success >>>>", r)
 			return nil, "Just a value", nil
 		},
+	).Finally(
+		func() {
+			fmt.Println("Finally 2")
+		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
 			fmt.Println("Success <<<<<", r)
@@ -109,11 +109,9 @@ func main() {
 			fmt.Println("On Fail3", err)
 			return nil, nil, nil
 		},
-	).Finally(
-		func() {
-			fmt.Println("Finally 2")
-		},
 	)
+
+	fmt.Println(p)
 
 	fmt.Println("All Done")
 	// time.Sleep(10 * time.Second)

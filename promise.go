@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 )
 
@@ -12,16 +11,19 @@ func NewPromise(
 		rj func(error) (interface{}, error),
 	) (interface{}, error)) *Promise {
 
+	p := Promise{}
+	p.channel = make(chan int)
+	p.status = 0
 	resolve := func(v interface{}) (interface{}, error) {
+		p.status = 1
 		return v, nil
 	}
 
 	reject := func(e error) (interface{}, error) {
+		p.status = 2
 		return "", e
 	}
 
-	p := Promise{}
-	p.channel = make(chan int)
 	p.wg.Add(1)
 	go func() {
 		p.res, p.err = callback(resolve, reject)
@@ -33,7 +35,10 @@ func NewPromise(
 // Then Method
 func (p *Promise) Then(f ...interface{}) *Promise {
 
-	fmt.Println("Then Called")
+	p.wg.Wait()
+	if p.status == 0 {
+		return p
+	}
 
 	var r func(r interface{}) (*Promise, interface{}, error)
 	var e func(err error) (*Promise, interface{}, error)
@@ -42,29 +47,24 @@ func (p *Promise) Then(f ...interface{}) *Promise {
 		r = reflect.ValueOf(f[0]).Interface().(func(r interface{}) (*Promise, interface{}, error))
 	}
 
-	if len(f) == 2 {
+	if len(f) >= 2 {
 		e = reflect.ValueOf(f[1]).Interface().(func(err error) (*Promise, interface{}, error))
 	}
 
 	var p1 *Promise
 
 	go func() {
-		p.wg.Wait()
 		if p.err != nil {
-
 			if e == nil {
-				fmt.Println("e is null")
 				p1 = p
 				p.channel <- 1
 				return
 			}
-			// prom1, val1, err1 :=
 			p1 = populatePromise(e(p.err))
 			p.channel <- 1
 			return
 		}
 		if r == nil {
-			fmt.Println("r is null")
 			p1 = p
 			p.channel <- 1
 			return
@@ -79,15 +79,12 @@ func (p *Promise) Then(f ...interface{}) *Promise {
 // Catch Method
 func (p *Promise) Catch(f ...interface{}) *Promise {
 
-	fmt.Println(len(f))
-
 	if len(f) == 0 {
 		return p
 	}
 
 	return p.Then(
 		func(r interface{}) (*Promise, interface{}, error) {
-			fmt.Println("Callin then from Catch", r)
 			return nil, r, nil
 		},
 		f[0],
@@ -96,9 +93,8 @@ func (p *Promise) Catch(f ...interface{}) *Promise {
 
 // Finally Method
 func (p *Promise) Finally(f func()) *Promise {
-
+	p.wg.Wait()
 	go func() {
-		p.wg.Wait()
 		f()
 		p.channel <- 1
 	}()
