@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+
 	links := []string{
 		"http://google.com",
 		"http://youtube.com",
@@ -16,16 +17,16 @@ func main() {
 	link2 := links[1]
 	link3 := links[2]
 
-	p := NewPromise(
+	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
 			_, err := http.Get(link)
 			if err != nil {
-				return reject(fmt.Errorf("%v is down :(", link))
+				reject(fmt.Errorf("%v is down :(", link))
 			}
-			return resolve(link + " is up :)")
+			resolve(link + " is up :)")
 		},
 	).Finally(
 		func() {
@@ -55,15 +56,15 @@ func main() {
 			fmt.Println("On Success 1111 >> ", r)
 			return NewPromise(
 				func(
-					resolve func(v interface{}) (interface{}, error),
-					reject func(e error) (interface{}, error),
-				) (interface{}, error) {
+					resolve func(v interface{}),
+					reject func(e error),
+				) {
 
 					_, err := http.Get(link2)
 					if err != nil {
-						return reject(fmt.Errorf("%v is down :(", link2))
+						reject(fmt.Errorf("%v is down :(", link2))
 					}
-					return resolve(link2 + " is up :)")
+					resolve(link2 + " is up :)")
 				},
 			), nil, nil
 		},
@@ -91,15 +92,15 @@ func main() {
 			fmt.Println("On Fail2", err)
 			return NewPromise(
 				func(
-					resolve func(v interface{}) (interface{}, error),
-					reject func(e error) (interface{}, error),
-				) (interface{}, error) {
+					resolve func(v interface{}),
+					reject func(e error),
+				) {
 
 					_, err := http.Get(link3)
 					if err != nil {
-						return reject(fmt.Errorf("%v is down :(", link3))
+						reject(fmt.Errorf("%v is down :(", link3))
 					}
-					return resolve(link3 + " is up :)")
+					resolve(link3 + " is up :)")
 				},
 			), nil, nil
 		},
@@ -109,10 +110,4 @@ func main() {
 			return nil, nil, nil
 		},
 	)
-
-	fmt.Println(p)
-
-	fmt.Println("All Done")
-	// time.Sleep(10 * time.Second)
-
 }

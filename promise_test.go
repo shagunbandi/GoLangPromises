@@ -8,10 +8,10 @@ import (
 func TestResolvedThenAndNoCatch(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	).Catch(
 		func(err error) (*Promise, interface{}, error) {
@@ -32,10 +32,10 @@ func TestResolvedThenAndNoCatch(t *testing.T) {
 func TestRejectedNoThenAndCatch(t *testing.T) {
 	p := NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return reject(fmt.Errorf("Rejected"))
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			reject(fmt.Errorf("Rejected"))
 		},
 	)
 	p.Then(
@@ -56,10 +56,10 @@ func TestRejectedNoThenAndCatch(t *testing.T) {
 func TestEmptyThen(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	).Then().Then(
 		func(r interface{}) (*Promise, interface{}, error) {
@@ -75,10 +75,10 @@ func TestEmptyThen(t *testing.T) {
 func TestEmptyCatch(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return reject(fmt.Errorf("Rejected"))
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			reject(fmt.Errorf("Rejected"))
 		},
 	).Catch().Catch(
 		func(err error) (*Promise, interface{}, error) {
@@ -93,10 +93,10 @@ func TestEmptyCatch(t *testing.T) {
 func TestUnresolvedPromiseNoThenNoCatch(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return nil, nil
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
@@ -114,10 +114,10 @@ func TestUnresolvedPromiseNoThenNoCatch(t *testing.T) {
 func TestReturnValueFromBlock(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
@@ -141,10 +141,10 @@ func TestReturnValueFromBlock(t *testing.T) {
 func TestReturnErrorFromBlock(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
@@ -167,19 +167,19 @@ func TestReturnErrorFromBlock(t *testing.T) {
 func TestPromiseReturn(t *testing.T) {
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved1")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved1")
 		},
 	).Then(
 		func(r interface{}) (*Promise, interface{}, error) {
 			return NewPromise(
 				func(
-					resolve func(v interface{}) (interface{}, error),
-					reject func(e error) (interface{}, error),
-				) (interface{}, error) {
-					return resolve("Resolved2")
+					resolve func(v interface{}),
+					reject func(e error),
+				) {
+					resolve("Resolved2")
 				},
 			), nil, nil
 		},
@@ -198,10 +198,10 @@ func TestFinally(t *testing.T) {
 	v := 0
 	NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	).Finally(
 		func() {
@@ -216,13 +216,12 @@ func TestFinally(t *testing.T) {
 func TestUnresolvedPromise(t *testing.T) {
 	p := NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return nil, nil
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
 		},
 	)
-	if p.status != 0 {
+	if p.status != PENDING {
 		t.Errorf("Expected Status '0', got '%v'", p.status)
 	}
 }
@@ -230,13 +229,13 @@ func TestUnresolvedPromise(t *testing.T) {
 func TestResolvedPromise(t *testing.T) {
 	p := NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return resolve("Resolved")
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			resolve("Resolved")
 		},
 	)
-	if p.status != 1 {
+	if p.status != RESOLVED {
 		t.Errorf("Expected Status '1', got '%v'", p.status)
 	}
 }
@@ -244,13 +243,12 @@ func TestResolvedPromise(t *testing.T) {
 func TestRejectedPromise(t *testing.T) {
 	p := NewPromise(
 		func(
-			resolve func(v interface{}) (interface{}, error),
-			reject func(e error) (interface{}, error),
-		) (interface{}, error) {
-			return reject(fmt.Errorf("Rejected"))
-		},
-	)
-	if p.status != 2 {
+			resolve func(v interface{}),
+			reject func(e error),
+		) {
+			reject(fmt.Errorf("Rejected"))
+		})
+	if p.status != REJECTED {
 		t.Errorf("Expected Status '2', got '%v'", p.status)
 	}
 }
