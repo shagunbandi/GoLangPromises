@@ -7,4 +7,3 @@ Finally 2
 Success <<<<< Just a value
 On Fail2 Just a Fail
 On Fail3 http://facebook.com is down :(
-All Done

@@ -16,8 +16,8 @@ func main() {
 	link := links[0]
 	link2 := links[1]
 	link3 := links[2]
-
-	NewPromise(
+	var p Promiser
+	p = NewPromise(
 		func(
 			resolve func(v interface{}),
 			reject func(e error),
@@ -28,7 +28,8 @@ func main() {
 			}
 			resolve(link + " is up :)")
 		},
-	).Finally(
+	)
+	p.Finally(
 		func() {
 			fmt.Println("Finally 1")
 		},
