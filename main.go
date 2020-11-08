@@ -3,144 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"reflect"
-	"sync"
 )
-
-// Promise Struct
-type Promise struct {
-	wg      sync.WaitGroup
-	channel chan int
-	res     interface{}
-	err     error
-}
-
-// NewPromise Returns a New Promise
-func NewPromise(
-	callback func(
-		resolve func(interface{}) (interface{}, error),
-		reject func(error) (interface{}, error),
-	) (interface{}, error)) *Promise {
-
-	resolveFunc := func(v interface{}) (interface{}, error) {
-		return v, nil
-	}
-
-	rejectFunc := func(e error) (interface{}, error) {
-		return "", e
-	}
-
-	p := Promise{}
-	p.channel = make(chan int)
-	p.wg.Add(1)
-	go func() {
-		p.res, p.err = callback(resolveFunc, rejectFunc)
-		p.wg.Done()
-	}()
-	return &p
-}
-
-func getPromiseOrEmptyPromise(p *Promise) *Promise {
-	if p != nil {
-		return p
-	}
-	p1 := &Promise{}
-	p1.channel = make(chan int)
-	p1.res = nil
-	p1.err = nil
-	return p1
-}
-
-func populatePromise(prom1 *Promise, val1 interface{}, err1 error) *Promise {
-	if prom1 == nil {
-		prom1 = getPromiseOrEmptyPromise(nil)
-		if val1 == nil {
-			prom1.err = err1
-		}
-		if val1 != nil {
-			prom1.res = val1
-		}
-	}
-	return prom1
-}
-
-// Then Method
-func (p *Promise) Then(funcs ...interface{}) *Promise {
-
-	fmt.Println("Then Called")
-
-	var r func(r interface{}) (*Promise, interface{}, error)
-	var e func(err error) (*Promise, interface{}, error)
-
-	if len(funcs) >= 1 {
-		r = reflect.ValueOf(funcs[0]).Interface().(func(r interface{}) (*Promise, interface{}, error))
-	}
-
-	if len(funcs) == 2 {
-		e = reflect.ValueOf(funcs[1]).Interface().(func(err error) (*Promise, interface{}, error))
-	}
-
-	var p1 *Promise
-
-	go func() {
-		p.wg.Wait()
-		if p.err != nil {
-
-			if e == nil {
-				fmt.Println("e is null")
-				p1 = p
-				p.channel <- 1
-				return
-			}
-			prom1, val1, err1 := e(p.err)
-			p1 = populatePromise(prom1, val1, err1)
-			p.channel <- 1
-			return
-		}
-		if r == nil {
-			fmt.Println("r is null")
-			p1 = p
-			p.channel <- 1
-			return
-		}
-
-		prom1, val1, err1 := r(p.res)
-		p1 = populatePromise(prom1, val1, err1)
-		p.channel <- 1
-	}()
-	<-p.channel
-	return p1
-}
-
-// Catch Method
-func (p *Promise) Catch(funcs ...interface{}) *Promise {
-
-	fmt.Println(len(funcs))
-
-	if len(funcs) == 0 {
-		return p
-	}
-
-	return p.Then(
-		func(r interface{}) (*Promise, interface{}, error) {
-			fmt.Println("Callin then from Catch", r)
-			return nil, r, nil
-		},
-		funcs[0],
-	)
-}
-
-// Finally Method
-func (p *Promise) Finally(f func()) *Promise {
-
-	go func() {
-		p.wg.Wait()
-		f()
-		p.channel <- 1
-	}()
-	<-p.channel
-	return p
-}
 
 func main() {
 
@@ -156,7 +19,7 @@ func main() {
 	link2 := links[1]
 	link3 := links[2]
 
-	NewPromise(
+	p := NewPromise(
 		func(
 			resolve func(v interface{}) (interface{}, error),
 			reject func(e error) (interface{}, error),
@@ -167,7 +30,9 @@ func main() {
 			}
 			return resolve(link + " is up :)")
 		},
-	).Finally(
+	)
+
+	p.Finally(
 		func() {
 			fmt.Println("Finally 1")
 		},
