@@ -26,7 +26,6 @@ func main() {
 				return reject(fmt.Errorf("%v is down :(", link))
 			}
 			return resolve(link + " is up :)")
-			// return nil, nil
 		},
 	).Finally(
 		func() {

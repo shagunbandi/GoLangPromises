@@ -24,18 +24,17 @@ func NewPromise(
 		return "", e
 	}
 
-	p.wg.Add(1)
 	go func() {
 		p.res, p.err = callback(resolve, reject)
-		p.wg.Done()
+		p.channel <- 1
 	}()
+	<-p.channel
 	return &p
 }
 
 // Then Method
 func (p *Promise) Then(f ...interface{}) *Promise {
 
-	p.wg.Wait()
 	if p.status == 0 {
 		return p
 	}
@@ -93,7 +92,6 @@ func (p *Promise) Catch(f ...interface{}) *Promise {
 
 // Finally Method
 func (p *Promise) Finally(f func()) *Promise {
-	p.wg.Wait()
 	go func() {
 		f()
 		p.channel <- 1
