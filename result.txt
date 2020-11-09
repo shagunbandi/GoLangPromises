@@ -1,9 +1,0 @@
-Finally 1
-Success >>>> http://google.com is up :)
-Failed >>>> Throwing Exception
-On Success 1111 >>  Exception Caught Correctly 111
-Success >>>> http://youtube.com is up :)
-Finally 2
-Success <<<<< Just a value
-On Fail2 Just a Fail
-On Fail3 http://facebook.com is down :(
